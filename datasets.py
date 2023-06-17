@@ -26,8 +26,8 @@ class Proj3_Dataset(Dataset):
         tgt_row = self.annos.loc[idx]
         filename = tgt_row['filename']
         filepath = f'datasets/images/{filename}'
-        if not osp.isfile(filepath):
-            raise Exception(f"{filepath} does not exist")
+        # if not osp.isfile(filepath):
+        #     raise Exception(f"{filepath} does not exist")
         img = cv2.cvtColor(cv2.imread(filepath), cv2.COLOR_BGR2RGB)  # RGB
         img = Image.fromarray(img)
         if self.transform:

@@ -12,8 +12,8 @@ import einops
 
 from datasets import Proj3_Dataset
 from models import *
-
-np.random.seed(230525)
+from copy import copy
+np.random.seed(230617)
 
 
 def get_args_parser():
@@ -47,7 +47,7 @@ def run_eval(net, data_loader):
     output_logit = np.concatenate(output_logit)
     output_cls = np.argmax(output_logit, axis=1)
 
-    return output_cls
+    return output_cls, np.max(output_logit, axis=1)
 
 
 if __name__ == '__main__':
@@ -61,7 +61,6 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    num_epochs = 50
     num_workers = 2
     batch_size = 16
     num_cls = 50
@@ -81,7 +80,7 @@ if __name__ == '__main__':
                                ])
 
     test_subm_dataset = Proj3_Dataset(test_subm, 'test', val_transform)
-    test_subm_loader = DataLoader(test_subm_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=False)
+    test_subm_loader = DataLoader(test_subm_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
     print("Test dataset: #", len(test_subm_dataset))
 
     ## build and load model
@@ -92,9 +91,12 @@ if __name__ == '__main__':
     ## forward
     img_mean = torch.tensor([0.485, 0.456, 0.406]).reshape(1, 3, 1, 1).to(device)
     img_std = torch.tensor([0.229, 0.224, 0.225]).reshape(1, 3, 1, 1).to(device)
-    output_cls = run_eval(net, test_subm_loader)
+    output_cls, logits = run_eval(net, test_subm_loader)
 
     ## save as csv file
-    SID = 20369608
+    SID = 2019145010
     test_subm['cls'] = output_cls
-    test_subm.to_csv(f'datasets/{SID}_test_subm.csv', index=False)
+    test_logit = copy(test_subm)
+    test_logit['logit'] = logits
+    test_subm.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")}-{args.num_crop}CROP_test_subm.csv', index=False)
+    test_logit.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")}-{args.num_crop}CROP_test_logit.csv', index=False)

@@ -1,8 +1,9 @@
 import torchvision.models as models
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.models import ResNet34_Weights
+from torchvision.models.convnext import CNBlock
 from collections import OrderedDict
-from torchinfo import summary
 import torch
 
 
@@ -47,16 +48,18 @@ class AttentionPool2D(nn.Module):
 class R34_ver1(nn.Module):
     def __init__(self, num_cls=50, freeze_backbone=False):
         super(R34_ver1, self).__init__()
-        resnet = models.resnet34(pretrained=True)
+        resnet = models.resnet34(weights=ResNet34_Weights.DEFAULT)
         backbone = nn.Sequential(OrderedDict([*(list(resnet.named_children())[:-2])])) # drop last layer which is classifier
 
         ## freezing backbone parameters
         if freeze_backbone:
             for param in backbone.parameters():
                 param.requires_grad = False
+        
+        
         self.freeze_backbone = freeze_backbone
         self.backbone = backbone
-
+       
         ## avg pooling layer
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -76,10 +79,90 @@ class R34_ver1(nn.Module):
         return logit
 
 
+
+
+class R34_extension(nn.Module):
+    def __init__(self, num_cls=50, freeze_backbone=False):
+        super(R34_extension, self).__init__()
+        resnet = models.resnet34(weights=ResNet34_Weights.DEFAULT)
+        backbone = nn.Sequential(OrderedDict([*(list(resnet.named_children())[:-2])])) # drop last layer which is classifier
+
+        ## freezing backbone parameters
+        if freeze_backbone:
+            for param in backbone.parameters():
+                param.requires_grad = False
+        
+        
+        self.freeze_backbone = freeze_backbone
+        self.backbone = backbone
+
+        self.cnblock = nn.Sequential(
+            *[CNBlock(512, 1.0, 0.1) for _ in range(4)]
+        )
+        
+        ## avg pooling layer
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+
+        ## customized classifier layers
+        self.classfier = nn.Sequential(
+            nn.LayerNorm(512),
+            nn.Linear(512, num_cls),
+        )
+
+        # for m in self.modules():
+        #     if isinstance(m, (nn.Conv2d, nn.Linear)):
+        #         nn.init.trunc_normal_(m.weight, std=0.02)
+        #         if m.bias is not None:
+        #             nn.init.zeros_(m.bias)
+
+
+    def forward(self, img):
+        feat_map = self.cnblock(self.backbone(img))
+        feat_1d = self.avgpool(feat_map).flatten(1)
+        logit = self.classfier(feat_1d)
+
+        return logit
+
+
+
+
+class R34_simple(nn.Module):
+    def __init__(self, num_cls=50, freeze_backbone=False):
+        super(R34_simple, self).__init__()
+        resnet = models.resnet34(weights=ResNet34_Weights.DEFAULT)
+        backbone = nn.Sequential(OrderedDict([*(list(resnet.named_children())[:-2])])) # drop last layer which is classifier
+
+        ## freezing backbone parameters
+        if freeze_backbone:
+            for param in backbone.parameters():
+                param.requires_grad = False
+        self.freeze_backbone = freeze_backbone
+        self.backbone = backbone
+
+        ## avg pooling layer
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        ## customized classifier layers
+        self.classfier = nn.Sequential(
+            # nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, num_cls),
+        )
+
+    def forward(self, img):
+        feat_map = self.backbone(img)
+        feat_1d = self.avgpool(feat_map).flatten(1)
+        logit = self.classfier(feat_1d)
+
+        return logit
+
+
 class R34_attnPool(nn.Module):
     def __init__(self, num_cls=50, freeze_backbone=False):
         super(R34_attnPool, self).__init__()
-        resnet = models.resnet34(pretrained=True)
+        resnet = models.resnet34(weights=ResNet34_Weights.DEFAULT)
         backbone = nn.Sequential(OrderedDict([*(list(resnet.named_children())[:-2])])) # drop last layer which is classifier
 
         ## freezing backbone parameters
@@ -107,6 +190,8 @@ class R34_attnPool(nn.Module):
 
         return logit
     
-if __name__ == '__main__':
-    model = R34_attnPool(50, True)
-    summary(model, (1, 3, 224, 224), device='cpu')
+
+if __name__ == "__main__":
+    from torchinfo import summary
+    model = R34_extension(50, True)
+    summary(model, (1, 3, 224, 224))
