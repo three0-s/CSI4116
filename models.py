@@ -87,17 +87,26 @@ class R34_extension(nn.Module):
         resnet = models.resnet34(weights=ResNet34_Weights.DEFAULT)
         backbone = nn.Sequential(OrderedDict([*(list(resnet.named_children())[:-2])])) # drop last layer which is classifier
 
-        ## freezing backbone parameters
-        if freeze_backbone:
-            for param in backbone.parameters():
-                param.requires_grad = False
         
+
+        ## freezing backbone parameters
+        # if freeze_backbone:
+        for param in backbone.parameters():
+            param.requires_grad = False
+        
+        if (not freeze_backbone):
+            for param in backbone.layer2.parameters():
+                param.requires_grad = True
+            for param in backbone.layer3.parameters():
+                param.requires_grad = True
+            for param in backbone.layer4.parameters():
+                param.requires_grad = True
         
         self.freeze_backbone = freeze_backbone
         self.backbone = backbone
 
         self.cnblock = nn.Sequential(
-            *[CNBlock(512, 1.0, 0.1) for _ in range(4)]
+            *[CNBlock(512, 1.0, 0.3/4 * (_+1)) for _ in range(4)]
         )
         
         ## avg pooling layer
@@ -106,6 +115,7 @@ class R34_extension(nn.Module):
 
         ## customized classifier layers
         self.classfier = nn.Sequential(
+            nn.GELU(),
             nn.LayerNorm(512),
             nn.Linear(512, num_cls),
         )
@@ -194,4 +204,5 @@ class R34_attnPool(nn.Module):
 if __name__ == "__main__":
     from torchinfo import summary
     model = R34_extension(50, True)
-    summary(model, (1, 3, 224, 224))
+    print(model)
+    # summary(model, (1, 3, 224, 224))

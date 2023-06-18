@@ -86,6 +86,7 @@ def get_args_parser():
     argparser.add_argument('--ver_name', default="")
     argparser.add_argument('--epoch', default="100")
     argparser.add_argument('--pretrained', default="")
+    argparser.add_argument('--batch', default="256")
 
     args = argparser.parse_args()
 
@@ -197,7 +198,7 @@ if __name__ == '__main__':
     weight_decay = float(args.weight_decay)
 
     num_workers = 2
-    batch_size = 256
+    batch_size = int(args.batch)
     freeze_backbone = args.freeze
     num_cls = 50
     optim_type = args.optim_type
@@ -251,17 +252,19 @@ if __name__ == '__main__':
         print(f"Loading a pretrained model from {args.pretrained}...")
         net.load_state_dict(torch.load(args.pretrained, map_location=device))
         # unfreeze!
+        for param in net.backbone.parameters():
+            param.requires_grad = True
         # unfreeze the last layer of backbone
-        for param in net.backbone.layer4.parameters():
-            param.requires_grad = True
+        # for param in net.backbone.parameters():
+        #     param.requires_grad = True
         
-        # unfreeze the second-last layer of backbone
-        for param in net.backbone.layer3.parameters():
-            param.requires_grad = True
+        # # unfreeze the second-last layer of backbone
+        # for param in net.backbone.layer3.parameters():
+        #     param.requires_grad = True
         
-        # unfreeze the third-last layer of backbone
-        for param in net.backbone.layer2.parameters():
-            param.requires_grad = True
+        # # unfreeze the third-last layer of backbone
+        # for param in net.backbone.layer2.parameters():
+        #     param.requires_grad = True
 
     ## train & validation
     img_mean = torch.tensor([0.485, 0.456, 0.406]).reshape(1, 3, 1, 1).to(device)
@@ -273,7 +276,7 @@ if __name__ == '__main__':
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=num_epochs, eta_min=lr/100)
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optim, lr*2, steps_per_epoch=len(train_loader), epochs=num_epochs)
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.1)
-    scheduler = CosineAnnealingWarmUpRestarts(optim, T_0=num_epochs, T_mult=2, eta_max=lr*1.3,  T_up=5, gamma=0.5)
+    scheduler = CosineAnnealingWarmUpRestarts(optim, T_0=20, T_mult=2, eta_max=lr*1.3,  T_up=5, gamma=0.5)
     print(f"Train loader size: {len(train_loader)}")
     run_trainval()
 

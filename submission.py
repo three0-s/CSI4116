@@ -65,7 +65,7 @@ if __name__ == '__main__':
     batch_size = 16
     num_cls = 50
     arch_ver = args.arch_ver
-    model_choices = {'ver1': R34_ver1}
+    model_choices = {'ver1': R34_ver1, 'attnPool': R34_attnPool, 'convnext': R34_extension}
     crop_choices = {1: T.CenterCrop, 5: T.FiveCrop, 10: T.TenCrop}
     img_size = 256
     crop_size = 224
@@ -98,5 +98,5 @@ if __name__ == '__main__':
     test_subm['cls'] = output_cls
     test_logit = copy(test_subm)
     test_logit['logit'] = logits
-    test_subm.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")}-{args.num_crop}CROP_test_subm.csv', index=False)
-    test_logit.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")}-{args.num_crop}CROP_test_logit.csv', index=False)
+    test_subm.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")+"_"+os.path.basename(args.ckpt_path)}-{args.num_crop}CROP_test_subm.csv', index=False)
+    test_logit.to_csv(f'datasets/{SID}_{os.path.dirname(args.ckpt_path).replace("/", "-")+"_"+os.path.basename(args.ckpt_path)}-{args.num_crop}CROP_test_logit.csv', index=False)

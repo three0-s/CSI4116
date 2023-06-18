@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-for LR in 1e-3 5e-3
+for LR in 5e-4
 do
-    for LB in 0 0.1
+    for LB in 0 0.1 0.2 0.3 0.4
     do
-            python train.py --lr $LR --freeze --arch_ver convnext --ver_name dynamic_nColor-customCos$LR'_'$WD'_'$LB --labelsmooth $LB --optim_type "adamw" --weight_decay 1e-4 --epoch 200
+            python train.py --lr $LR --arch_ver convnext --ver_name wColor-customCos$LR'_'$WD'_'$LB'_B32' --batch 32 --labelsmooth $LB --optim_type "adamw" --weight_decay 1e-4 --epoch 200
     done
 done
