@@ -40,11 +40,13 @@ def run_eval(net, data_loader):
             out = net(img)
             prob = out.softmax(dim=1)
             if multi_crop_flag:
-                prob = einops.rearrange(prob, '(b v) nc -> b v nc', b=num_batch).mean(dim=1)
+                prob = einops.rearrange(prob, '(b v) nc -> b v nc', b=num_batch).median(dim=1).values
 
             output_logit.append(prob.cpu().numpy())
 
     output_logit = np.concatenate(output_logit)
+    # print(output_logit.shape)
+    # return
     output_cls = np.argmax(output_logit, axis=1)
 
     return output_cls, np.max(output_logit, axis=1)
